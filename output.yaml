@@ -1,0 +1,517 @@
+---
+# Source: myproject/charts/mongodb/templates/networkpolicy.yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: huggingface-mongodb
+  namespace: "gpn-mizzou-muhpdi-bhanu"
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+    app.kubernetes.io/component: mongodb
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: huggingface
+      app.kubernetes.io/name: mongodb
+      app.kubernetes.io/component: mongodb
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - {}
+  ingress:
+    - ports:
+        - port: 27017
+---
+# Source: myproject/charts/mongodb/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: huggingface-mongodb
+  namespace: "gpn-mizzou-muhpdi-bhanu"
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+secrets:
+  - name: huggingface-mongodb
+automountServiceAccountToken: false
+---
+# Source: myproject/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: huggingface-gpt2
+  labels:
+    helm.sh/chart: myproject-0.1.0
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: myproject/charts/mongodb/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: huggingface-mongodb
+  namespace: gpn-mizzou-muhpdi-bhanu
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+    app.kubernetes.io/component: mongodb
+type: Opaque
+data:
+  mongodb-root-password: "YmdRMjlXeHRLTA=="
+---
+# Source: myproject/charts/mongodb/templates/common-scripts-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: huggingface-mongodb-common-scripts
+  namespace: "gpn-mizzou-muhpdi-bhanu"
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+    app.kubernetes.io/component: mongodb
+data:
+  startup-probe.sh: |
+    #!/bin/bash
+    exec mongosh  $TLS_OPTIONS --port $MONGODB_PORT_NUMBER --eval 'if (!(db.hello().isWritablePrimary || db.hello().secondary)) { throw new Error("Not ready") }'
+  readiness-probe.sh: |
+    #!/bin/bash
+    # Run the proper check depending on the version
+    [[ $(mongod -version | grep "db version") =~ ([0-9]+\.[0-9]+\.[0-9]+) ]] && VERSION=${BASH_REMATCH[1]}
+    . /opt/bitnami/scripts/libversion.sh
+    VERSION_MAJOR="$(get_sematic_version "$VERSION" 1)"
+    VERSION_MINOR="$(get_sematic_version "$VERSION" 2)"
+    VERSION_PATCH="$(get_sematic_version "$VERSION" 3)"
+    readiness_test='db.isMaster().ismaster || db.isMaster().secondary'
+    if [[ ( "$VERSION_MAJOR" -ge 5 ) || ( "$VERSION_MAJOR" -ge 4 && "$VERSION_MINOR" -ge 4 && "$VERSION_PATCH" -ge 2 ) ]]; then
+        readiness_test='db.hello().isWritablePrimary || db.hello().secondary'
+    fi
+    exec mongosh  $TLS_OPTIONS --port $MONGODB_PORT_NUMBER --eval "if (!(${readiness_test})) { throw new Error(\"Not ready\") }"
+  ping-mongodb.sh: |
+    #!/bin/bash
+    exec mongosh  $TLS_OPTIONS --port $MONGODB_PORT_NUMBER --eval "db.adminCommand('ping')"
+---
+# Source: myproject/charts/mongodb/templates/standalone/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: huggingface-mongodb
+  namespace: "gpn-mizzou-muhpdi-bhanu"
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+    app.kubernetes.io/component: mongodb
+  annotations:
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "8Gi"
+---
+# Source: myproject/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: huggingface-gpt2
+spec:
+  accessModes: 
+    
+    - ReadWriteOnce
+  storageClassName: rook-ceph-block
+  resources:
+    requests:
+      storage: 500Gi
+---
+# Source: myproject/charts/mongodb/templates/standalone/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: huggingface-mongodb
+  namespace: "gpn-mizzou-muhpdi-bhanu"
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+    app.kubernetes.io/component: mongodb
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: "mongodb"
+      port: 27017
+      targetPort: mongodb
+      nodePort: null
+  selector:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/component: mongodb
+---
+# Source: myproject/templates/chat/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: huggingface-gpt2-chat
+  labels:
+    helm.sh/chart: myproject-0.1.0
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 3000
+  selector:
+    app.kubernetes.io/name: gpt2-chat-ui
+    app.kubernetes.io/instance: huggingface-chat
+---
+# Source: myproject/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: huggingface-gpt2
+  labels:
+    helm.sh/chart: myproject-0.1.0
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+---
+# Source: myproject/charts/mongodb/templates/standalone/dep-sts.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: huggingface-mongodb
+  namespace: "gpn-mizzou-muhpdi-bhanu"
+  labels:
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/version: 7.0.6
+    helm.sh/chart: mongodb-14.13.0
+    app.kubernetes.io/component: mongodb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: huggingface
+      app.kubernetes.io/name: mongodb
+      app.kubernetes.io/component: mongodb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: huggingface
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: mongodb
+        app.kubernetes.io/version: 7.0.6
+        helm.sh/chart: mongodb-14.13.0
+        app.kubernetes.io/component: mongodb
+    spec:
+      
+      automountServiceAccountToken: false
+      serviceAccountName: huggingface-mongodb
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: huggingface
+                    app.kubernetes.io/name: mongodb
+                    app.kubernetes.io/component: mongodb
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
+        supplementalGroups: []
+        sysctls: []
+      
+      enableServiceLinks: true
+      containers:
+        - name: mongodb
+          image: docker.io/bitnami/mongodb:7.0.6-debian-12-r0
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsGroup: 0
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: BITNAMI_DEBUG
+              value: "false"
+            - name: MONGODB_ROOT_USER
+              value: "root"
+            - name: MONGODB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: huggingface-mongodb
+                  key: mongodb-root-password
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "no"
+            - name: MONGODB_SYSTEM_LOG_VERBOSITY
+              value: "0"
+            - name: MONGODB_DISABLE_SYSTEM_LOG
+              value: "no"
+            - name: MONGODB_DISABLE_JAVASCRIPT
+              value: "no"
+            - name: MONGODB_ENABLE_JOURNAL
+              value: "yes"
+            - name: MONGODB_PORT_NUMBER
+              value: "27017"
+            - name: MONGODB_ENABLE_IPV6
+              value: "no"
+            - name: MONGODB_ENABLE_DIRECTORY_PER_DB
+              value: "no"
+          ports:
+            - name: mongodb
+              containerPort: 27017
+          livenessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 10
+            exec:
+              command:
+                - /bitnami/scripts/ping-mongodb.sh
+          readinessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - /bitnami/scripts/readiness-probe.sh
+          resources:
+            limits:
+              cpu: "10"
+              memory: 10G
+            requests:
+              cpu: "1"
+              memory: 1G
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/mongodb/conf
+              subPath: app-conf-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/mongodb/tmp
+              subPath: app-tmp-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/mongodb/logs
+              subPath: app-logs-dir
+            - name: datadir
+              mountPath: /bitnami/mongodb
+              subPath: 
+            - name: common-scripts
+              mountPath: /bitnami/scripts
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: common-scripts
+          configMap:
+            name: huggingface-mongodb-common-scripts
+            defaultMode: 0550
+        - name: datadir
+          persistentVolumeClaim:
+            claimName: huggingface-mongodb
+---
+# Source: myproject/templates/application.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: huggingface-gpt2
+  labels:
+    helm.sh/chart: myproject-0.1.0
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gpt2
+      app.kubernetes.io/instance: huggingface
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gpt2
+        app.kubernetes.io/instance: huggingface
+    spec:
+      serviceAccountName: huggingface-gpt2
+      initContainers:
+        - name: init
+          image: alpine:3.18.4
+          imagePullPolicy: "IfNotPresent"
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -x
+              if [ -f "/usr/src/gpt2/config.json" ]; then echo "Model gpt2 is already downloaded. Skipping init..."; exit 0; fi
+              echo "Files present before init:"
+              ls -al /usr/src/gpt2
+              rm -rf /usr/src/gpt2/*
+              rm -rf /usr/src/gpt2/.*
+              echo "Files present after cleaning the path:"
+              ls -al /usr/src/gpt2
+              apk add --update git-lfs
+              git clone --progress --depth=1 https://bhanuprakashvangala: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@huggingface.co/openai-community/gpt2 /usr/src/gpt2
+              echo "Cloning Successfully Finished. May start Main container"
+          volumeMounts:
+            - name: model-storage
+              mountPath: "/usr/src/gpt2"
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "1Gi"
+            limits:
+              cpu: "0.1"
+              memory: "1Gi"
+
+      containers:
+        - name: model
+          image: ghcr.io/huggingface/text-generation-inference:latest
+          imagePullPolicy: IfNotPresent
+          command: [ "text-generation-launcher" ]
+          args:
+            - "--model-id"
+            - "openai-community/gpt2"
+            - "--huggingface-hub-cache"
+            - "/usr/src/gpt2"
+            - "--weights-cache-override"
+            - "/usr/src/gpt2"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HUGGINGFACE_OFFLINE
+              value: "1"
+          volumeMounts:
+            - name: model-storage
+              mountPath: "/usr/src/gpt2"
+            - name: shm
+              mountPath: /dev/shm
+          resources:
+            requests:
+              cpu: "3"
+              memory: "10Gi"
+              nvidia.com/gpu: "2"
+            limits:
+              cpu: "8"
+              memory: "25Gi"
+              nvidia.com/gpu: "2"
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: huggingface-gpt2
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+---
+# Source: myproject/templates/chat/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: huggingface-gpt2-chat
+  labels:
+    helm.sh/chart: myproject-0.1.0
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+spec:
+  tls:
+    - hosts:
+        - "bhanu-chat.nrp-nautilus.io"
+      secretName: 
+  rules:
+    - host: "bhanu-chat.nrp-nautilus.io"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: huggingface-gpt2-chat
+                port:
+                  number: 3000
+---
+# Source: myproject/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: huggingface-gpt2
+  labels:
+    helm.sh/chart: myproject-0.1.0
+    app.kubernetes.io/name: gpt2
+    app.kubernetes.io/instance: huggingface
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+spec:
+  tls:
+    - hosts:
+        - "bhanu.nrp-nautilus.io"
+      secretName: 
+  rules:
+    - host: "bhanu.nrp-nautilus.io"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: huggingface-gpt2
+                port:
+                  number: 8080

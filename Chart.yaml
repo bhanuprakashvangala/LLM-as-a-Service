@@ -1,0 +1,13 @@
+apiVersion: v2
+name: myproject
+description: Helm chart for deploying Hugging Face models to a Kubernetes cluster. See [Hugging Face models](https://huggingface.co/models)
+
+type: application
+
+version: 0.1.0
+
+dependencies:
+- condition: mongodb.enabled
+  name: mongodb
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 14.x.x

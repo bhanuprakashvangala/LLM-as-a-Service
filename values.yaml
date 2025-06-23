@@ -1,0 +1,173 @@
+model:
+  organization: "openai-community"
+  name: "gpt2"
+  hf_user: "bhanuprakashvangala"
+  hf_token: "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"
+
+init:
+  s3:
+    enabled: false
+    bucketURL: s3://k8s-model-zephyr/llm/deployment/HuggingFaceH4/zephyr-7b-beta
+  resources:
+    requests:
+      cpu: "0.1"
+      memory: "1Gi"
+    limits:
+      cpu: "0.1"
+      memory: "1Gi"
+
+huggingface:
+  containerPort: 8080
+  args: []
+
+replicaCount: 1
+
+kind: Deployment
+
+image:
+  repo: ghcr.io/huggingface/text-generation-inference
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+shmVolume:
+  enabled: true
+  sizeLimit: "1Gi"
+
+persistence:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: rook-ceph-block
+  storage: 500Gi
+
+service:
+  port: 8080
+  type: "ClusterIP"
+
+serviceAccount:
+  create: true
+  role: {}
+
+podAnnotations: {}
+
+updateStrategy:
+  type: Recreate
+
+securityContext: {}
+
+extraEnvVars: []
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+  hosts:
+  - host: bhanu.nrp-nautilus.io
+    paths:
+      - path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - bhanu.nrp-nautilus.io
+
+livenessProbe: {}
+
+readinessProbe: {}
+
+startupProbe: {}
+
+pdb:
+  create: false
+  minAvailable: 1
+  maxUnavailable: ""
+
+resources:
+  requests:
+    cpu: "3"
+    memory: "10Gi"
+    nvidia.com/gpu: "1"
+  limits:
+    cpu: "8"
+    memory: "25Gi"
+    nvidia.com/gpu: "1"
+
+extraVolumes: []
+
+extraVolumeMounts: []
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPU: 50
+  targetMemory: 50
+
+nodeSelector: {}
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nvidia.com/gpu.product
+              operator: In
+              values:
+                - NVIDIA-GeForce-RTX-3090  # Adjust this value based on available GPU types in your cluster
+
+tolerations:
+  - key: "nvidia.com/gpu"
+    operator: "Exists"
+    effect: "NoSchedule"
+
+chat:
+  enabled: false
+  replicaCount: 1
+  extraEnvVars: []
+  modelConfig: {}
+  additionalModels: []
+  podAnnotations: {}
+  imagePullSecrets: []
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512M"
+    limits:
+      cpu: "2"
+      memory: "5G"
+  image:
+    repo: "ghcr.io/huggingface/chat-ui"
+    tag: "v0.8"
+    pullPolicy: IfNotPresent
+  mongodb: {}
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: haproxy
+    hosts:
+    - host: bhanu-chat.nrp-nautilus.io
+      paths:
+      - path: /
+        pathType: Prefix
+    tls:
+    - hosts:
+      - bhanu-chat.nrp-nautilus.io
+
+mongodb:
+  install: true
+  auth:
+    rootPassword: ""
+  updateStrategy:
+    type: Recreate
+  resources:
+    limits:
+      cpu: "10"
+      memory: "10G"
+    requests:
+      cpu: "1"
+      memory: "1G"
