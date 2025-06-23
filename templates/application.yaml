@@ -1,0 +1,163 @@
+{{- if or ( not .Values.model ) ( or (not .Values.model.name) (not .Values.model.organization) ) -}}
+{{- fail "model.name and model.organization are required but not set!" -}}
+{{- end }}
+{{- $kind := .Values.kind | default "Deployment" }}
+{{- $namePrefix := include "myproject.fullname" . | trunc 63 | trimSuffix "-" -}}
+apiVersion: apps/v1
+kind: {{ $kind }}
+metadata:
+  name: {{ include "myproject.fullname" . }}
+  labels:
+    {{- include "myproject.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.updateStrategy }}
+  {{- if (eq $kind "Deployment") }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- else }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end}}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "myproject.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "myproject.selectorLabels" . | nindent 8 }}
+        {{- if .Values.pdb.create }}
+        pdbEnabled: {{ include "myproject.fullname" . }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if eq $kind "StatefulSet" }}
+      serviceName: {{ include "myproject.fullname" . }}
+      {{- end }}
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "myproject.serviceAccountName" . }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: init
+          image: alpine:3.18.4
+          imagePullPolicy: "IfNotPresent"
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -x
+              if [ -f "/usr/src/{{ .Values.model.name }}/config.json" ]; then echo "Model {{ .Values.model.name }} is already downloaded. Skipping init..."; exit 0; fi
+              echo "Files present before init:"
+              ls -al /usr/src/{{ .Values.model.name }}
+              rm -rf /usr/src/{{ .Values.model.name }}/*
+              rm -rf /usr/src/{{ .Values.model.name }}/.*
+              echo "Files present after cleaning the path:"
+              ls -al /usr/src/{{ .Values.model.name }}
+              {{- if and .Values.init.s3.enabled }}
+              apk add --update aws-cli
+              aws s3 cp --recursive {{ .Values.init.s3.bucketURL }} /usr/src/{{ .Values.model.name }}
+              {{- else }}
+              apk add --update git-lfs
+              git clone --progress --depth=1 https://{{ if and .Values.model.hf_user .Values.model.hf_token }}{{ .Values.model.hf_user }}:{{ .Values.model.hf_token }}@{{ end }}huggingface.co/{{ .Values.model.organization }}/{{ .Values.model.name }} /usr/src/{{ .Values.model.name }}
+              echo "Cloning Successfully Finished. May start Main container"
+              {{- end }}
+          volumeMounts:
+            - name: model-storage
+              mountPath: "/usr/src/{{ .Values.model.name }}"
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: "1Gi"
+            limits:
+              cpu: "0.1"
+              memory: "1Gi"
+
+      containers:
+        - name: model
+          image: {{ .Values.image.repo }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          command: [ "text-generation-launcher" ]
+          args:
+            - "--model-id"
+            - "{{ .Values.model.organization }}/{{ .Values.model.name }}"
+            - "--huggingface-hub-cache"
+            - "/usr/src/{{ .Values.model.name }}"
+            - "--weights-cache-override"
+            - "/usr/src/{{ .Values.model.name }}"
+            {{- with .Values.huggingface.args }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: {{ include "myproject.containerPort" . }}
+          env:
+            - name: PORT
+              value: "{{ include "myproject.containerPort" . }}"
+            - name: HUGGINGFACE_OFFLINE
+              value: "1"
+            {{- with .Values.extraEnvVars }}
+            {{ toYaml . | nindent 12 }}
+            {{- end}}
+          {{- with .Values.livenessProbe }}
+          livenessProbe: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: model-storage
+              mountPath: "/usr/src/{{ .Values.model.name }}"
+            {{- if .Values.shmVolume.enabled }}
+            - name: shm
+              mountPath: /dev/shm
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            requests:
+              cpu: "3"
+              memory: "10Gi"
+              nvidia.com/gpu: "2"
+            limits:
+              cpu: "8"
+              memory: "25Gi"
+              nvidia.com/gpu: "2"
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: {{ include "myproject.fullname" . }}
+        {{- if .Values.shmVolume.enabled }}
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ default "1Gi" .Values.shmVolume.sizeLimit }}
+        {{- end }}
+      {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
