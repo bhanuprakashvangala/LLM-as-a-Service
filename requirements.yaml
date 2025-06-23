@@ -1,0 +1,5 @@
+dependencies:
+  - name: mongodb
+    version: 14.x.x
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: mongodb.enabled
