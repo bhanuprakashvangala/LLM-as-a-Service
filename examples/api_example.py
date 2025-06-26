@@ -25,4 +25,3 @@ response = requests.post(f"{INFERENCE_URL}/generate", json={"inputs": prompt})
 response.raise_for_status()
 print(response.json())
 
-

@@ -30,6 +30,10 @@ print(add("1", 2))
 if __name__ == "__main__":
     asyncio.run(main())
 
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
 """
 if __name__ == "__main__":
     asyncio.run(main())
@@ -41,3 +45,4 @@ prompt = f"Debug this Python code and explain the fix:\n\n{code_snippet}"
 response = requests.post(f"{INFERENCE_URL}/generate", json={"inputs": prompt})
 response.raise_for_status()
 print(response.json())
+
