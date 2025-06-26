@@ -11,6 +11,11 @@ helm install <release-name> .
 `local-ui/` contains a small web interface built with FastAPI so you can chat with the deployed model from your PC.
 
 
+1. Install dependencies:
+   ```bash
+   pip install fastapi uvicorn httpx jinja2
+
+
 ### Run the UI
 1. Install dependencies:
    ```bash
@@ -58,7 +63,6 @@ helm upgrade --install <release-name> .
 
 When enabled, the UI listens on port 3000 and can be exposed externally via the
 `chat.ingress` settings.
-
 
 ## Simple API example
 You can also interact with the model using plain HTTP requests. A Python example is provided in `examples/api_example.py`:
