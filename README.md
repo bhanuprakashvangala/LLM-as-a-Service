@@ -8,20 +8,18 @@ helm install <release-name> .
 
 ## Local Chat UI
 
-<<<<<<< cs00i9-codex/use-code-with-llm-for-debugging
 `local-ui/` contains a small web interface built with FastAPI so you can chat with the deployed model from your PC.
-=======
+
 A minimal Flask-based UI is included in `local-ui/` to interact with the running model from your PC.
->>>>>>> main
 
 ### Run the UI
 1. Install dependencies:
    ```bash
-<<<<<<< cs00i9-codex/use-code-with-llm-for-debugging
+
    pip install fastapi uvicorn httpx jinja2
-=======
+
    pip install flask requests
->>>>>>> main
+
    ```
 2. Set the model endpoint (default `http://localhost:8080`):
    ```bash
@@ -35,7 +33,6 @@ A minimal Flask-based UI is included in `local-ui/` to interact with the running
 
 Update the `INFERENCE_URL` environment variable or edit `local-ui/app.py` if your service runs on a different address.
 
-<<<<<<< cs00i9-codex/use-code-with-llm-for-debugging
 ## Deploying the chart with a chat UI
 
 The Helm chart ships with an optional web interface. To deploy it alongside the
@@ -55,8 +52,7 @@ helm upgrade --install <release-name> .
 When enabled, the UI listens on port 3000 and can be exposed externally via the
 `chat.ingress` settings.
 
-=======
->>>>>>> main
+
 ## Simple API example
 You can also interact with the model using plain HTTP requests. A Python example is provided in `examples/api_example.py`:
 
