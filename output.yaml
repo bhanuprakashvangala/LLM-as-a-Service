@@ -4,7 +4,7 @@ kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
   name: huggingface-mongodb
-  namespace: "gpn-mizzou-muhpdi-bhanu"
+  namespace: "example-namespace"
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -32,7 +32,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: huggingface-mongodb
-  namespace: "gpn-mizzou-muhpdi-bhanu"
+  namespace: "example-namespace"
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -59,7 +59,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: huggingface-mongodb
-  namespace: gpn-mizzou-muhpdi-bhanu
+  namespace: example-namespace
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -76,7 +76,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: huggingface-mongodb-common-scripts
-  namespace: "gpn-mizzou-muhpdi-bhanu"
+  namespace: "example-namespace"
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -110,7 +110,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: huggingface-mongodb
-  namespace: "gpn-mizzou-muhpdi-bhanu"
+  namespace: "example-namespace"
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -145,7 +145,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: huggingface-mongodb
-  namespace: "gpn-mizzou-muhpdi-bhanu"
+  namespace: "example-namespace"
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -211,7 +211,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: huggingface-mongodb
-  namespace: "gpn-mizzou-muhpdi-bhanu"
+  namespace: "example-namespace"
   labels:
     app.kubernetes.io/instance: huggingface
     app.kubernetes.io/managed-by: Helm
@@ -403,7 +403,7 @@ spec:
               echo "Files present after cleaning the path:"
               ls -al /usr/src/gpt2
               apk add --update git-lfs
-              git clone --progress --depth=1 https://bhanuprakashvangala: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@huggingface.co/openai-community/gpt2 /usr/src/gpt2
+              git clone --progress --depth=1 https://<hf_user>:<hf_token>@huggingface.co/openai-community/gpt2 /usr/src/gpt2
               echo "Cloning Successfully Finished. May start Main container"
           volumeMounts:
             - name: model-storage
@@ -473,10 +473,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - "bhanu-chat.nrp-nautilus.io"
+        - "chat.example.com"
       secretName: 
   rules:
-    - host: "bhanu-chat.nrp-nautilus.io"
+    - host: "chat.example.com"
       http:
         paths:
           - path: /
@@ -502,10 +502,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - "bhanu.nrp-nautilus.io"
+        - "my-model.example.com"
       secretName: 
   rules:
-    - host: "bhanu.nrp-nautilus.io"
+    - host: "my-model.example.com"
       http:
         paths:
           - path: /
