@@ -27,6 +27,25 @@ A minimal Flask-based UI is included in `local-ui/` to interact with the running
 
 Update the `INFERENCE_URL` environment variable or edit `local-ui/app.py` if your service runs on a different address.
 
+## Deploying the chart with a chat UI
+
+The Helm chart ships with an optional web interface. To deploy it alongside the
+inference server, edit `values.yaml` and set:
+
+```yaml
+chat:
+  enabled: true
+```
+
+Install (or upgrade) the chart after modifying your values:
+
+```bash
+helm upgrade --install <release-name> .
+```
+
+When enabled, the UI listens on port 3000 and can be exposed externally via the
+`chat.ingress` settings.
+
 ## Simple API example
 You can also interact with the model using plain HTTP requests. A Python example is provided in `examples/api_example.py`:
 
