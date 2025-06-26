@@ -1,8 +1,9 @@
 model:
   organization: "openai-community"
   name: "gpt2"
-  hf_user: "bhanuprakashvangala"
-  hf_token: "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"
+  # Provide your Hugging Face credentials if the model is private
+  hf_user: ""
+  hf_token: ""
 
 init:
   s3:
@@ -66,13 +67,13 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: haproxy
   hosts:
-  - host: bhanu.nrp-nautilus.io
+  - host: my-model.example.com
     paths:
       - path: /
         pathType: Prefix
   tls:
   - hosts:
-    - bhanu.nrp-nautilus.io
+    - my-model.example.com
 
 livenessProbe: {}
 
@@ -150,13 +151,13 @@ chat:
     annotations:
       kubernetes.io/ingress.class: haproxy
     hosts:
-    - host: bhanu-chat.nrp-nautilus.io
+    - host: chat.example.com
       paths:
       - path: /
         pathType: Prefix
     tls:
     - hosts:
-      - bhanu-chat.nrp-nautilus.io
+      - chat.example.com
 
 mongodb:
   install: true
