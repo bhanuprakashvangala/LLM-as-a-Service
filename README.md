@@ -10,6 +10,12 @@ helm install <release-name> .
 
 `local-ui/` contains a small web interface built with FastAPI so you can chat with the deployed model from your PC.
 
+
+### Run the UI
+1. Install dependencies:
+   ```bash
+   pip install fastapi uvicorn httpx jinja2
+
 A minimal Flask-based UI is included in `local-ui/` to interact with the running model from your PC.
 
 ### Run the UI
@@ -19,6 +25,7 @@ A minimal Flask-based UI is included in `local-ui/` to interact with the running
    pip install fastapi uvicorn httpx jinja2
 
    pip install flask requests
+
 
    ```
 2. Set the model endpoint (default `http://localhost:8080`):
