@@ -29,6 +29,37 @@
       const text = data.generated_text || data.error || JSON.stringify(data);
       msgs.innerHTML += `<div><b>LLM:</b> ${text}</div>`;
     };
+
+  <title>Local LLM Chat</title>
+  <style>
+    #messages {height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 5px;}
+  </style>
+</head>
+<body>
+  <div id="messages"></div>
+  <form id="chatForm">
+    <input id="prompt" type="text" placeholder="Enter prompt" style="width:80%;" />
+    <button type="submit">Send</button>
+  </form>
+  <script>
+    const form = document.getElementById('chatForm');
+    const messages = document.getElementById('messages');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const prompt = document.getElementById('prompt').value;
+      if (!prompt) return;
+      messages.innerHTML += `<div><b>You:</b> ${prompt}</div>`;
+      document.getElementById('prompt').value = '';
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({prompt})
+      });
+      const data = await res.json();
+      const text = data.generated_text || data.error || JSON.stringify(data);
+      messages.innerHTML += `<div><b>LLM:</b> ${text}</div>`;
+    });
+
   </script>
 </body>
 </html>
